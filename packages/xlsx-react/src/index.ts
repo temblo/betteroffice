@@ -117,7 +117,7 @@ export {
   type ToolbarCommandSelectProps,
 } from './components/toolbar/ToolbarCommand';
 export { ToolbarOverflow, type ToolbarOverflowProps } from './components/toolbar/ToolbarOverflow';
-export type { FormulaBarProps } from './components/toolbar/FormulaBar';
+export { FormulaBarContext, type FormulaBarBinding, type FormulaBarProps } from './components/toolbar/FormulaBar';
 
 export { defineXlsxPlugin } from './plugins/defineXlsxPlugin';
 export { XlsxPluginToolbar } from './plugins/XlsxPluginToolbar';
