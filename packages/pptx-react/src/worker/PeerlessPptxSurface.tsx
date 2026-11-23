@@ -359,6 +359,7 @@ export function PeerlessPptxSurface(props: PptxAsyncEditorInternalProps) {
       </div>
       {plugins.managed && <PluginDock host={plugins.host} placement="right" activations={plugins.activations.filter((entry) => entry.plugin.panel?.placement === 'right')} available={available} />}
       {presentation && <PeerlessReview run={presentation} diffHost={slideFrame} state={review} proposals={proposals} commands={commands}
+        presentationControls={props.presentationControls}
         onError={(error) => callbacks.current.onError?.(error)} exit={() => { setReview({ ...review, presenting: false }); focus(); }} />}
     </div>
     {plugins.managed && <PluginDock host={plugins.host} placement="bottom" activations={plugins.activations.filter((entry) => entry.plugin.panel?.placement === 'bottom')} available={available} />}

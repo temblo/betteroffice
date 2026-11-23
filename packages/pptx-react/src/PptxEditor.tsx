@@ -9,6 +9,7 @@ import type { PptxCommandStore } from './commands/types';
 import type { PptxShortcuts } from './commands/shortcuts';
 import type { ShortcutIssue } from '../../../shared/keyboard/resolve';
 import type { PptxEditorPluginProps, PptxPlugin } from './plugins/types';
+import type { RenderPresentationControls } from './components/PresentationShell';
 import type { PptxWorkerEditorProps } from './worker/PptxWorkerEditor';
 import type { PptxWorkerEditorApi } from './worker/createWorkerEditorApi';
 import type { PptxAsyncEditorApi } from './worker/createPeerlessEditorApi';
@@ -199,6 +200,13 @@ export interface PptxInThreadEditorProps extends PptxEditorPluginProps {
   toolbar?: ReactNode;
   /** Shows the toolbar region; defaults to true. */
   showToolbar?: boolean;
+  /**
+   * Draws the controls shown while presenting, in a layer over the slide that
+   * ignores the pointer, so interactive parts set `pointer-events: auto`. They
+   * hide after 2.5 s without pointer activity. Omit for the default controls.
+   * @experimental
+   */
+  presentationControls?: RenderPresentationControls;
   /**
    * Remaps or disables keyboard shortcuts; menus and tooltips follow.
    * @experimental

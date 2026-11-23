@@ -1,91 +1,63 @@
 import { paintSlide, sizeCanvasForSlide } from '@betteroffice/pptx';
 import type { CanvasImageResolver, SlideDisplayList } from '@betteroffice/pptx';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { PresentationShell, type PresentationShellProps } from '../components/PresentationShell';
+
+type FrameSource = (index: number) => Promise<{ frame: SlideDisplayList; resolveImage: CanvasImageResolver; release(): void }>;
 
 export function PeerlessPresentationOverlay({
   frameSource,
   subscribeRevision = idle,
   revision = none,
+  onError,
+  ...shell
+}: PresentationShellProps & {
+  frameSource: FrameSource;
+  subscribeRevision?: (listener: () => void) => () => void;
+  revision?: (index: number) => string | null;
+  onError: (error: unknown) => void;
+}) {
+  return (
+    <PresentationShell {...shell}>
+      {(index, viewport) => (
+        <PeerlessSlide
+          frameSource={frameSource}
+          subscribeRevision={subscribeRevision}
+          revision={revision}
+          index={index}
+          viewport={viewport}
+          slideCount={shell.slideCount}
+          onExit={shell.onExit}
+          onError={onError}
+        />
+      )}
+    </PresentationShell>
+  );
+}
+
+function PeerlessSlide({
+  frameSource,
+  subscribeRevision,
+  revision,
+  index,
+  viewport,
   slideCount,
-  startIndex,
-  label,
-  counterLabel,
-  exitLabel,
-  previousLabel,
-  nextLabel,
   onExit,
   onError,
 }: {
-  frameSource: (index: number) => Promise<{ frame: SlideDisplayList; resolveImage: CanvasImageResolver; release(): void }>;
-  subscribeRevision?: (listener: () => void) => () => void;
-  revision?: (index: number) => string | null;
+  frameSource: FrameSource;
+  subscribeRevision: (listener: () => void) => () => void;
+  revision: (index: number) => string | null;
+  index: number;
+  viewport: { width: number; height: number };
   slideCount: number;
-  startIndex: number;
-  label: string;
-  counterLabel: (current: number, total: number) => string;
-  exitLabel: string;
-  previousLabel: string;
-  nextLabel: string;
   onExit: () => void;
   onError: (error: unknown) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const callbacks = useRef({ onExit, onError });
   callbacks.current = { onExit, onError };
-  const [requestedIndex, setIndex] = useState(startIndex);
-  const index = Math.max(0, Math.min(requestedIndex, slideCount - 1));
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const slideRevision = useSyncExternalStore(subscribeRevision, () => revision(index), () => revision(index));
-  const step = (delta: number) =>
-    setIndex(Math.max(0, Math.min(index + delta, slideCount - 1)));
-
-  useEffect(() => {
-    setIndex((current) => Math.max(0, Math.min(current, slideCount - 1)));
-    if (slideCount === 0) callbacks.current.onExit();
-  }, [slideCount]);
-
-  useEffect(() => {
-    const dialog = dialogRef.current!;
-    const container = containerRef.current!;
-    const previousFocus = document.activeElement;
-    let active = true;
-    dialog.showModal();
-    dialog.focus();
-    void container
-      .requestFullscreen?.()
-      .then(() => {
-        if (active) {
-          dialog.close();
-          dialog.showModal();
-          dialog.focus();
-        } else if (document.fullscreenElement === container) {
-          void document.exitFullscreen().catch(() => undefined);
-        }
-      })
-      .catch(() => undefined);
-    const onFullscreenChange = () => {
-      if (!document.fullscreenElement) callbacks.current.onExit();
-    };
-    const onResize = () =>
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
-    onResize();
-    window.addEventListener('resize', onResize);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    return () => {
-      active = false;
-      window.removeEventListener('resize', onResize);
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
-      if (document.fullscreenElement === container) {
-        void document.exitFullscreen().catch(() => undefined);
-      }
-      dialog.close();
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
-        previousFocus.focus();
-    };
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -123,188 +95,8 @@ export function PeerlessPresentationOverlay({
     };
   }, [frameSource, index, slideCount, viewport, slideRevision]);
 
-  return (
-    <div ref={containerRef}>
-      <dialog
-        ref={dialogRef}
-        aria-label={label}
-        tabIndex={-1}
-        style={styles.presentationOverlay}
-        onCancel={(event) => {
-          event.preventDefault();
-          onExit();
-        }}
-        onClick={(event) => {
-          if (event.target === dialogRef.current) step(1);
-        }}
-        onKeyDown={(event) => {
-          if (event.altKey || event.ctrlKey || event.metaKey) return;
-          switch (event.key) {
-            case ' ':
-              if (event.target instanceof HTMLElement && event.target.closest('button'))
-                return;
-              step(1);
-              break;
-            case 'ArrowRight':
-            case 'ArrowDown':
-            case 'PageDown':
-              step(1);
-              break;
-            case 'ArrowLeft':
-            case 'ArrowUp':
-            case 'PageUp':
-              step(-1);
-              break;
-            case 'Home':
-              setIndex(0);
-              break;
-            case 'End':
-              setIndex(Math.max(0, slideCount - 1));
-              break;
-            case 'Escape':
-              onExit();
-              break;
-            default:
-              return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-      >
-        <canvas ref={canvasRef} style={styles.presentationCanvas} />
-        <button
-          type="button"
-          onClick={onExit}
-          aria-label={exitLabel}
-          title={exitLabel}
-          style={styles.presentationExit}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path d="M6 6 18 18M18 6 6 18" />
-          </svg>
-        </button>
-        <div style={styles.presentationControls}>
-          <button
-            type="button"
-            onClick={() => step(-1)}
-            disabled={index === 0}
-            aria-label={previousLabel}
-            style={styles.presentationNavButton}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              aria-hidden="true"
-            >
-              <path d="m15 6-6 6 6 6" />
-            </svg>
-          </button>
-          <span style={styles.presentationCounter} aria-live="polite">
-            {counterLabel(index + 1, slideCount)}
-          </span>
-          <button
-            type="button"
-            onClick={() => step(1)}
-            disabled={index >= slideCount - 1}
-            aria-label={nextLabel}
-            style={styles.presentationNavButton}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              aria-hidden="true"
-            >
-              <path d="m9 6 6 6-6 6" />
-            </svg>
-          </button>
-        </div>
-      </dialog>
-    </div>
-  );
+  return <canvas ref={canvasRef} style={{ display: 'block', pointerEvents: 'none' }} />;
 }
 
 const idle = () => () => {};
 const none = () => null;
-
-const styles = {
-  presentationOverlay: {
-    position: 'fixed',
-    margin: 0,
-    padding: 0,
-    border: 0,
-    width: '100vw',
-    height: '100vh',
-    maxWidth: 'none',
-    maxHeight: 'none',
-    inset: 0,
-    zIndex: 2147483000,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#000000',
-    cursor: 'pointer',
-  },
-  presentationCanvas: { display: 'block', pointerEvents: 'none' },
-  presentationExit: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 36,
-    height: 36,
-    border: 0,
-    borderRadius: 999,
-    background: 'rgba(255, 255, 255, 0.14)',
-    color: '#ffffff',
-    cursor: 'pointer',
-  },
-  presentationControls: {
-    position: 'absolute',
-    bottom: 20,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '6px 14px',
-    borderRadius: 999,
-    background: 'rgba(255, 255, 255, 0.12)',
-  },
-  presentationNavButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 28,
-    height: 28,
-    border: 0,
-    borderRadius: 999,
-    background: 'rgba(255, 255, 255, 0.14)',
-    color: '#ffffff',
-    cursor: 'pointer',
-  },
-  presentationCounter: {
-    minWidth: 64,
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 600,
-    textAlign: 'center',
-  },
-} satisfies Record<string, CSSProperties>;

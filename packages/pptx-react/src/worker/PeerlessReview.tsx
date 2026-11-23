@@ -10,6 +10,7 @@ import { commandReason } from '../commands/evaluate';
 import { useProposalTranslation } from '../i18n/useProposalTranslation';
 import { proposalsPanelStyles as styles } from '../components/proposalsPanelStyles';
 import { PeerlessPresentationOverlay } from './PeerlessPresentationOverlay';
+import type { RenderPresentationControls } from '../components/PresentationShell';
 import type { PeerlessPresentation } from './usePeerlessPresentation';
 import { peerlessFrameSource, peerlessProposalFrameSource } from './peerlessFrameSource';
 import { commitComposition, PptxCommandRefusedError } from './peerlessViewStore';
@@ -82,9 +83,9 @@ function Diff({ run, id, slideId, onPreview, onError, onTarget }: { run: Peerles
   </>;
 }
 
-export function PeerlessReview({ run, diffHost, state, proposals, commands, onError, exit }: {
+export function PeerlessReview({ run, diffHost, state, proposals, commands, presentationControls, onError, exit }: {
   run: PeerlessPresentation; diffHost: RefObject<HTMLElement | null>; state: PeerlessReviewState; proposals: Proposal[]; commands: PptxCommandStore;
-  onError(error: Error): void; exit(): void;
+  presentationControls?: RenderPresentationControls; onError(error: Error): void; exit(): void;
 }) {
   const { t, lang } = useProposalTranslation();
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -213,6 +214,6 @@ export function PeerlessReview({ run, diffHost, state, proposals, commands, onEr
       slideCount={run.client.state.slides.length} startIndex={run.client.state.slides.findIndex((slide) => slide.id === run.client.state.activeSlideId)}
       label={t('presentation.label')} counterLabel={(current, total) => t('presentation.slideCounter', { current, total })}
       previousLabel={t('presentation.previousSlide')} nextLabel={t('presentation.nextSlide')} exitLabel={t('presentation.exit')}
-      onExit={exit} onError={(error) => onError(error instanceof Error ? error : new Error(String(error)))} />}
+      controls={presentationControls} onExit={exit} onError={(error) => onError(error instanceof Error ? error : new Error(String(error)))} />}
   </>;
 }

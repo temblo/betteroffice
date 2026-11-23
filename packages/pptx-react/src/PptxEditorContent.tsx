@@ -372,6 +372,7 @@ export function PptxEditorContent({
   readOnly = false,
   toolbar,
   showToolbar = true,
+  presentationControls,
   shortcuts,
   onShortcutIssue,
   i18n,
@@ -3161,6 +3162,7 @@ export function PptxEditorContent({
           exitLabel={t('presentation.exit')}
           previousLabel={t('presentation.previousSlide')}
           nextLabel={t('presentation.nextSlide')}
+          controls={presentationControls}
           onExit={() => setPresenting(false)}
           onError={reportError}
         />
