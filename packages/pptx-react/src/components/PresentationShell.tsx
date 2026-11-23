@@ -317,6 +317,7 @@ const styles = {
     justifyContent: 'center',
     background: '#000000',
     cursor: 'pointer',
+    touchAction: 'none',
   },
   presentationLayer: {
     position: 'absolute',

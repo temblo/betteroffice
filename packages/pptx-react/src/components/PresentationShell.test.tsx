@@ -52,6 +52,7 @@ it('draws the host controls in place of the default ones', () => {
 it('swipes between slides, and a tap on hidden controls only shows them', async () => {
   const view = render(shell());
   const dialog = view.getByRole('dialog', { hidden: true });
+  expect(dialog.style.touchAction).toBe('none');
   const layer = view.getByText('host 1 / 3').parentElement!;
   touch(dialog, 300, 100);
   expect(view.getByText('slide 1')).toBeTruthy();
